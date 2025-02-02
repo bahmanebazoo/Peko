@@ -12,10 +12,10 @@ import org.junit.Test
 import org.mockito.Mockito
 
 class PermissionRequesterTest {
-	private val requesterFactory = Mockito.mock(NativeRequesterFactory::class.java)
+	private val activityFactory = Mockito.mock(NativeActivityFactory::class.java)
 	private val context = Mockito.mock(Context::class.java)
-	private val nativeRequester = Mockito.mock(NativeRequester::class.java)
-	private val requestBuilder = Mockito.mock(PermissionRequestBuilder::class.java)
+	private val nativeActivity = Mockito.mock(NativeActivity::class.java)
+	private val permissionStateBuilder = Mockito.mock(PermissionStateBuilder::class.java)
 
 	private lateinit var permissionChannel: Channel<PermissionResult>
 
@@ -25,12 +25,11 @@ class PermissionRequesterTest {
 	fun setup() {
 		permissionChannel = Channel()
 
-		PermissionRequester.requesterFactory = requesterFactory
-		PermissionRequester.requestBuilder = requestBuilder
+		PermissionRequester.activityFactory = activityFactory
+		PermissionRequester.permissionStateBuilder = permissionStateBuilder
 		PermissionRequester.initialize(context)
 
-		Mockito.`when`(requesterFactory.getRequesterAsync(context)).thenReturn(CompletableDeferred(nativeRequester))
-		Mockito.`when`(nativeRequester.resultsChannel).thenReturn(permissionChannel)
+		Mockito.`when`(activityFactory.getActivityAsync(context)).thenReturn(CompletableDeferred(nativeActivity))
 
 		sut = PermissionRequester.instance()
 	}
@@ -39,8 +38,8 @@ class PermissionRequesterTest {
 	fun testGranted() {
 		val permission = "CONTACTS"
 
-		Mockito.`when`(requestBuilder.createPermissionRequest(context, permission)).thenReturn(
-			PermissionRequest(
+		Mockito.`when`(permissionStateBuilder.createPermissionState(context, permission)).thenReturn(
+			PermissionState(
 				listOf(), listOf(
 					permission
 				)
@@ -62,8 +61,8 @@ class PermissionRequesterTest {
 	fun testAlreadyGranted() {
 		val permission = "CONTACTS"
 
-		Mockito.`when`(requestBuilder.createPermissionRequest(context, permission)).thenReturn(
-			PermissionRequest(
+		Mockito.`when`(permissionStateBuilder.createPermissionState(context, permission)).thenReturn(
+			PermissionState(
 				listOf(permission), listOf()
 			)
 		)
@@ -79,8 +78,8 @@ class PermissionRequesterTest {
 		val denied = "COARSE_LOCATION"
 		val granted = "FUSED_LOCATION"
 
-		Mockito.`when`(requestBuilder.createPermissionRequest(context, denied, granted)).thenReturn(
-			PermissionRequest(
+		Mockito.`when`(permissionStateBuilder.createPermissionState(context, denied, granted)).thenReturn(
+			PermissionState(
 				granted = listOf(granted),
 				denied = listOf(denied)
 			)
@@ -96,8 +95,8 @@ class PermissionRequesterTest {
 		val denied = "COARSE_LOCATION"
 		val granted = "FUSED_LOCATION"
 
-		Mockito.`when`(requestBuilder.createPermissionRequest(context, denied, granted)).thenReturn(
-			PermissionRequest(
+		Mockito.`when`(permissionStateBuilder.createPermissionState(context, denied, granted)).thenReturn(
+			PermissionState(
 				granted = listOf(granted),
 				denied = listOf(denied)
 			)

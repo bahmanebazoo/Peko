@@ -6,17 +6,17 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
 import java.util.concurrent.ThreadLocalRandom
 
-internal interface NativeRequesterFactory {
-	fun getRequesterAsync(context: Context, vararg permissions: String): Deferred<NativeRequester>
+internal interface NativeActivityFactory {
+	fun getActivityAsync(context: Context): Deferred<NativeActivity>
 
 	companion object {
-		fun default(): NativeRequesterFactory = NativeRequesterFactoryImpl()
+		fun default(): NativeActivityFactory = NativeActivityFactoryImpl()
 	}
 }
 
-private class NativeRequesterFactoryImpl : NativeRequesterFactory {
-	override fun getRequesterAsync(context: Context, vararg permissions: String): Deferred<NativeRequester> {
-		val completableDeferred = CompletableDeferred<NativeRequester>()
+private class NativeActivityFactoryImpl : NativeActivityFactory {
+	override fun getActivityAsync(context: Context): Deferred<NativeActivity> {
+		val completableDeferred = CompletableDeferred<NativeActivity>()
 		val requestId = getRequestId()
 		PekoActivity.idToRequesterMap[requestId] = completableDeferred
 		val intent = Intent(context, PekoActivity::class.java)
