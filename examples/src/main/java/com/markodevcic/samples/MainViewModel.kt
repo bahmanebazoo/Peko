@@ -14,6 +14,9 @@ class MainViewModel(private val permissionRequester: PermissionRequester) : View
 
 	val liveData = MutableLiveData<PermissionResult>()
 
+	private val _permissionStateChannel : Channel<PermissionResult> = Channel()
+	val permissionStateFlow = _permissionStateChannel.receiveAsFlow()
+
 	private val permissionChannel: Channel<PermissionResult> = Channel()
 
 	val permissionsFlow: Flow<PermissionResult> = permissionChannel.receiveAsFlow()
@@ -28,6 +31,16 @@ class MainViewModel(private val permissionRequester: PermissionRequester) : View
 				.onEach {
 					liveData.value = it
 					permissionChannel.send(it)
+				}
+				.collect()
+		}
+	}
+
+	fun permissionState(vararg permission: String) {
+		viewModelScope.launch {
+			permissionRequester.permissionsState(*permission)
+				.onEach {
+					_permissionStateChannel.send(it)
 				}
 				.collect()
 		}
