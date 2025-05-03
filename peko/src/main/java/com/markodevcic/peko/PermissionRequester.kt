@@ -33,7 +33,7 @@ interface PermissionRequester {
 	 * checks and returns state of all permissions
 	 * @return [Flow]
 	 */
-	fun permissionsState(vararg permissions: String): Flow<PermissionResult>
+	fun checkPermissionsState(vararg permissions: String): Flow<PermissionResult>
 
 	/**
 	 * Starts the permission request flow.
@@ -142,11 +142,10 @@ interface PermissionRequester {
 			return permissions.isNotEmpty() && permissionState.granted.isNotEmpty()
 		}
 
-		override fun permissionsState(vararg permissions: String): Flow<PermissionResult> {
+		override fun checkPermissionsState(vararg permissions: String): Flow<PermissionResult> {
 			return if (permissions.isEmpty()) {
 				flowOf(PermissionResult.Cancelled)
 			} else {
-				val permissionList = permissions.toMutableList()
 				val permissionState = permissionStateBuilder
 					.createPermissionState(requireContext(), *permissions)
 				return channelFlow {

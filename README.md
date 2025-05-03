@@ -27,7 +27,7 @@ Sponsored by [CloudBit](https://www.cloudbit.hr)
 Hosted on [Maven Central](https://search.maven.org/artifact/com.markodevcic/peko)
 
 ```
-implementation 'com.markodevcic:peko:3.0.5'
+implementation 'com.markodevcic:peko:3.1.+'
 ```
 
 ### Example
@@ -65,6 +65,31 @@ launch {
     }
 }
 ```
+
+Need to inspect the current permission state **before requesting** anything? Use `checkPermissionState()`.
+It returns a `Flow<PermissionResult>` just like `request()`, but **without triggering the system permission dialog**.
+
+This is useful for handling sensitive UX flows or proactively deciding whether to show rationale.
+
+```kotlin
+launch {
+    requester.checkPermissionState(
+        Manifest.permission.CAMERA,
+        Manifest.permission.READ_CONTACTS
+    ).collect { p ->
+        when (p) {
+            is PermissionResult.Granted -> print("${p.permission} granted") // already granted
+            is PermissionResult.Denied.NeedsRationale -> print("${p.permission} needs rationale") // show rationale
+            is PermissionResult.NeverAskedOrDeniedPermanently -> print("${p.permission} never asked or permanently denied") // ambiguous state
+            is PermissionResult.Cancelled -> print("check cancelled")
+        }
+    }
+}
+```
+⚠️ `NeverAskedOrDeniedPermanently` reflects Android's behavior, where a permission that was never requested and one that was permanently denied both return the same state.
+If needed, you can still call `request()` afterward to resolve the actual condition.
+
+🚧 **Coming in Version 4.0.0**: PEKO will introduce internal permission state tracking to help eliminate this ambiguity and become a **Single Source of Truth (SSOT)** for permission management.
 
 Need to check only if permissions are granted? Let's skip the horrible Android API. No coroutine
 required.

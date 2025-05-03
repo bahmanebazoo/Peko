@@ -38,7 +38,7 @@ class MainViewModel(private val permissionRequester: PermissionRequester) : View
 
 	fun permissionState(vararg permission: String) {
 		viewModelScope.launch {
-			permissionRequester.permissionsState(*permission)
+			permissionRequester.checkPermissionsState(*permission)
 				.onEach {
 					_permissionStateChannel.send(it)
 				}

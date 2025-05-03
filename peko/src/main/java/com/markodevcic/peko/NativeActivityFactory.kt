@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.Intent
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
-import java.util.concurrent.ThreadLocalRandom
+import kotlin.random.Random
 
 internal interface NativeActivityFactory {
 	fun getActivityAsync(context: Context): Deferred<NativeActivity>
@@ -27,7 +27,6 @@ private class NativeActivityFactoryImpl : NativeActivityFactory {
 	}
 
 	private fun getRequestId(): String {
-		val random = ThreadLocalRandom.current().nextInt(Int.MAX_VALUE)
-		return random.hashCode().toString()
+		return Random.nextInt(Int.MAX_VALUE).toString()
 	}
 }
