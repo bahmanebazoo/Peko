@@ -4,7 +4,6 @@ import android.app.Activity
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -58,19 +57,19 @@ interface PermissionRequester {
 		private var appContext: Context? = null
 
 		internal var activityFactory = NativeActivityFactory.default()
-		internal var permissionStateBuilder = PermissionStateBuilder.default()
+		internal var permissionGrouper = PermissionGrouper.default()
 
 
 		/**
 		 * Default Peko implementation of the [PermissionRequester]
 		 * @return [PermissionRequester]
 		 */
-		fun instance(): PermissionRequester = PekoPermissionManager(activityFactory, permissionStateBuilder)
+		fun instance(): PermissionRequester = PekoPermissionManager(activityFactory, permissionGrouper)
 	}
 
 	private class PekoPermissionManager (
 		private val activityFactory: NativeActivityFactory,
-		private val permissionStateBuilder: PermissionStateBuilder
+		private val permissionGrouper: PermissionGrouper
 	) : PermissionRequester {
 		var nativeActivity: NativeActivity? = null
 		private val nativeActivityExecutors: MutableSet<Int> = mutableSetOf()
@@ -105,22 +104,22 @@ interface PermissionRequester {
 		}
 
 		override fun areGranted(vararg permissions: String): Boolean {
-			val permissionState = permissionStateBuilder.createPermissionState(requireContext(), *permissions)
-			return permissionState.denied.isEmpty()
+			val permissionGroup = permissionGrouper.group(requireContext(), *permissions)
+			return permissionGroup.denied.isEmpty()
 		}
 
 		override fun request(vararg permissions: String): Flow<PermissionResult> {
-			val permissionState = permissionStateBuilder.createPermissionState(requireContext(), *permissions)
+			val permissionGroup = permissionGrouper.group(requireContext(), *permissions)
 
 			val flow = channelFlow {
-				for (granted in permissionState.granted) {
+				for (granted in permissionGroup.granted) {
 					trySend(PermissionResult.Granted(granted))
 				}
-				if (permissionState.denied.isNotEmpty()) {
+				if (permissionGroup.denied.isNotEmpty()) {
 					val requestId = initNativeActivity()
 					val channel = Channel<PermissionResult>(Channel.UNLIMITED)
 					nativeActivity!!.requestPermissions(
-						permissionState.denied.toTypedArray(),
+						permissionGroup.denied.toTypedArray(),
 						Pair(requestId,channel)
 					)
 					for (result in channel) {
@@ -137,26 +136,26 @@ interface PermissionRequester {
 		}
 
 		override fun isAnyGranted(vararg permissions: String): Boolean {
-			val permissionState = permissionStateBuilder.createPermissionState(requireContext(), *permissions)
-			return permissions.isNotEmpty() && permissionState.granted.isNotEmpty()
+			val permissionGroup = permissionGrouper.group(requireContext(), *permissions)
+			return permissions.isNotEmpty() && permissionGroup.granted.isNotEmpty()
 		}
 
 		override fun checkPermissionsState(vararg permissions: String): Flow<PermissionResult> {
 			return if (permissions.isEmpty()) {
 				emptyFlow()
 			} else {
-				val permissionState = permissionStateBuilder
-					.createPermissionState(requireContext(), *permissions)
+				val permissionGroup = permissionGrouper
+					.group(requireContext(), *permissions)
 				channelFlow {
-					permissionState.granted.forEach { granted ->
+					permissionGroup.granted.forEach { granted ->
 						trySend(PermissionResult.Granted(granted))
 					}
 
-					if (permissionState.denied.isNotEmpty()) {
+					if (permissionGroup.denied.isNotEmpty()) {
 						val checkStateId = initNativeActivity()
 						val channel = Channel<PermissionResult>(Channel.UNLIMITED)
 						nativeActivity!!.checkStateOfDeniedPermissions(
-							permissionState.denied.toTypedArray(),
+							permissionGroup.denied.toTypedArray(),
 							channel
 						)
 						for (state in channel) {

@@ -1,6 +1,6 @@
 package com.markodevcic.peko
 
-internal class PermissionState(
+internal class PermissionGroup(
 		val granted: List<String>,
 		val denied: List<String>
 )

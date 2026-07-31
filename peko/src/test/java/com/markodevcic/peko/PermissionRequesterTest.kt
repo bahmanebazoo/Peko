@@ -15,7 +15,7 @@ class PermissionRequesterTest {
 	private val activityFactory = Mockito.mock(NativeActivityFactory::class.java)
 	private val context = Mockito.mock(Context::class.java)
 	private val nativeActivity = Mockito.mock(NativeActivity::class.java)
-	private val permissionStateBuilder = Mockito.mock(PermissionStateBuilder::class.java)
+	private val permissionGrouper = Mockito.mock(PermissionGrouper::class.java)
 
 	private lateinit var permissionChannel: Channel<PermissionResult>
 
@@ -26,7 +26,7 @@ class PermissionRequesterTest {
 		permissionChannel = Channel()
 
 		PermissionRequester.activityFactory = activityFactory
-		PermissionRequester.permissionStateBuilder = permissionStateBuilder
+		PermissionRequester.permissionGrouper = permissionGrouper
 		PermissionRequester.initialize(context)
 
 		Mockito.`when`(activityFactory.getActivityAsync(context)).thenReturn(CompletableDeferred(nativeActivity))
@@ -38,8 +38,8 @@ class PermissionRequesterTest {
 	fun testGranted() {
 		val permission = "CONTACTS"
 
-		Mockito.`when`(permissionStateBuilder.createPermissionState(context, permission)).thenReturn(
-			PermissionState(
+		Mockito.`when`(permissionGrouper.group(context, permission)).thenReturn(
+			PermissionGroup(
 				listOf(), listOf(
 					permission
 				)
@@ -61,8 +61,8 @@ class PermissionRequesterTest {
 	fun testAlreadyGranted() {
 		val permission = "CONTACTS"
 
-		Mockito.`when`(permissionStateBuilder.createPermissionState(context, permission)).thenReturn(
-			PermissionState(
+		Mockito.`when`(permissionGrouper.group(context, permission)).thenReturn(
+			PermissionGroup(
 				listOf(permission), listOf()
 			)
 		)
@@ -78,8 +78,8 @@ class PermissionRequesterTest {
 		val denied = "COARSE_LOCATION"
 		val granted = "FUSED_LOCATION"
 
-		Mockito.`when`(permissionStateBuilder.createPermissionState(context, denied, granted)).thenReturn(
-			PermissionState(
+		Mockito.`when`(permissionGrouper.group(context, denied, granted)).thenReturn(
+			PermissionGroup(
 				granted = listOf(granted),
 				denied = listOf(denied)
 			)
@@ -95,8 +95,8 @@ class PermissionRequesterTest {
 		val denied = "COARSE_LOCATION"
 		val granted = "FUSED_LOCATION"
 
-		Mockito.`when`(permissionStateBuilder.createPermissionState(context, denied, granted)).thenReturn(
-			PermissionState(
+		Mockito.`when`(permissionGrouper.group(context, denied, granted)).thenReturn(
+			PermissionGroup(
 				granted = listOf(granted),
 				denied = listOf(denied)
 			)
