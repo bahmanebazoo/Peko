@@ -32,7 +32,7 @@ interface PermissionRequester {
 	 * checks and returns state of all permissions
 	 * @return [Flow]
 	 */
-	fun checkPermissionsState(vararg permissions: String): Flow<PermissionResult>
+	fun checkPermissionsState(vararg permissions: String): Flow<PermissionState>
 
 	/**
 	 * Starts the permission request flow.
@@ -140,7 +140,7 @@ interface PermissionRequester {
 			return permissions.isNotEmpty() && permissionGroup.granted.isNotEmpty()
 		}
 
-		override fun checkPermissionsState(vararg permissions: String): Flow<PermissionResult> {
+		override fun checkPermissionsState(vararg permissions: String): Flow<PermissionState> {
 			return if (permissions.isEmpty()) {
 				emptyFlow()
 			} else {
@@ -148,12 +148,12 @@ interface PermissionRequester {
 					.group(requireContext(), *permissions)
 				channelFlow {
 					permissionGroup.granted.forEach { granted ->
-						trySend(PermissionResult.Granted(granted))
+						trySend(PermissionState.Granted(granted))
 					}
 
 					if (permissionGroup.denied.isNotEmpty()) {
 						val checkStateId = initNativeActivity()
-						val channel = Channel<PermissionResult>(Channel.UNLIMITED)
+						val channel = Channel<PermissionState>(Channel.UNLIMITED)
 						nativeActivity!!.checkStateOfDeniedPermissions(
 							permissionGroup.denied.toTypedArray(),
 							channel

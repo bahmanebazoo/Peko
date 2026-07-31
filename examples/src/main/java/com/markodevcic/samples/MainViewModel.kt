@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.markodevcic.peko.PermissionRequester
 import com.markodevcic.peko.PermissionResult
+import com.markodevcic.peko.PermissionState
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -14,7 +15,7 @@ class MainViewModel(private val permissionRequester: PermissionRequester) : View
 
 	val liveData = MutableLiveData<PermissionResult>()
 
-	private val _permissionStateChannel : Channel<PermissionResult> = Channel()
+	private val _permissionStateChannel : Channel<PermissionState> = Channel()
 	val permissionStateFlow = _permissionStateChannel.receiveAsFlow()
 
 	private val permissionChannel: Channel<PermissionResult> = Channel()

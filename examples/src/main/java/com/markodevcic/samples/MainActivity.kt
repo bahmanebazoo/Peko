@@ -10,6 +10,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import com.markodevcic.peko.PermissionRequester
 import com.markodevcic.peko.PermissionResult
+import com.markodevcic.peko.PermissionState
 import com.markodevcic.peko.allGranted
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.launch
@@ -37,7 +38,7 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launchWhenStarted {
             viewModel.permissionStateFlow.collect {
-                    setResult(it, false)
+                    setState(it)
             }
         }
 
@@ -84,8 +85,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-
-
 	private fun checkAllGranted(vararg permissions: String) {
 		lifecycleScope.launch {
 			val allGranted = viewModel.flowPermissions(*permissions).allGranted()
@@ -96,76 +95,94 @@ class MainActivity : AppCompatActivity() {
 		viewModel.requestPermissions(*permissions)
 	}
 
-    private fun setResult(result: PermissionResult, isRequest: Boolean = true) {
+    private fun setResult(result: PermissionResult) {
         if (result is PermissionResult.Granted) {
+
+            val granted = "GRANTED"
+            if (Manifest.permission.ACCESS_FINE_LOCATION == result.permission) {
+                textLocationResult.text = granted
+                textLocationResult.setTextColor(Color.GREEN)
+            }
+            if (Manifest.permission.WRITE_EXTERNAL_STORAGE == result.permission) {
+                textFileResult.text = granted
+                textFileResult.setTextColor(Color.GREEN)
+            }
+            if (Manifest.permission.CAMERA == result.permission) {
+                textCameraResult.text = granted
+                textCameraResult.setTextColor(Color.GREEN)
+            }
+            if (Manifest.permission.READ_CONTACTS == result.permission) {
+                textContactsResult.text = granted
+                textContactsResult.setTextColor(Color.GREEN)
+            }
+        } else if (result is PermissionResult.Denied) {
+            if (Manifest.permission.ACCESS_BACKGROUND_LOCATION == result.permission) {
+                textLocationResult.text = deniedReasonText(result)
+                textLocationResult.setTextColor(Color.RED)
+            }
+            if (Manifest.permission.WRITE_EXTERNAL_STORAGE == result.permission) {
+                textFileResult.text = deniedReasonText(result)
+                textFileResult.setTextColor(Color.RED)
+            }
+            if (Manifest.permission.CAMERA == result.permission) {
+                textCameraResult.text = deniedReasonText(result)
+                textCameraResult.setTextColor(Color.RED)
+            }
+            if (Manifest.permission.READ_CONTACTS == result.permission) {
+                textContactsResult.text = deniedReasonText(result)
+                textContactsResult.setTextColor(Color.RED)
+            }
+        } else if (result is PermissionResult.Cancelled) {
+            textLocationResult.text = cancelled
+            textLocationResult.setTextColor(Color.RED)
+            textFileResult.text = cancelled
+            textFileResult.setTextColor(Color.RED)
+            textCameraResult.text = cancelled
+            textCameraResult.setTextColor(Color.RED)
+            textContactsResult.text = cancelled
+            textContactsResult.setTextColor(Color.RED)
+        }
+    }
+
+    private fun setState(result: PermissionState) {
+        if (result is PermissionState.Granted) {
 
             val granted = "GRANTED"
             if (Manifest.permission.ACCESS_FINE_LOCATION == result.permission) {
                 textLocationState.text = granted
                 textLocationState.setTextColor(Color.GREEN)
-                if (isRequest) {
-                    textLocationResult.text = granted
-                    textLocationResult.setTextColor(Color.GREEN)
-                }
             }
             else if (Manifest.permission.WRITE_EXTERNAL_STORAGE == result.permission) {
                 textFileState.text = granted
                 textFileState.setTextColor(Color.GREEN)
-                if (isRequest) {
-                    textFileResult.text = granted
-                    textFileResult.setTextColor(Color.GREEN)
-                }
             }
             else if (Manifest.permission.CAMERA == result.permission) {
                 textCameraState.text = granted
                 textCameraState.setTextColor(Color.GREEN)
-                if (isRequest) {
-                    textCameraResult.text = granted
-                    textCameraResult.setTextColor(Color.GREEN)
-                }
             }
             else if (Manifest.permission.READ_CONTACTS == result.permission) {
                 textContactsState.text = granted
                 textContactsState.setTextColor(Color.GREEN)
-                if (isRequest) {
-                    textContactsResult.text = granted
-                    textContactsResult.setTextColor(Color.GREEN)
-                }
             }
-        } else if (result is PermissionResult.Denied) {
+        } else if (result is PermissionState.NeedsRationale) {
+            val denied = "NEEDS RATIONALE"
             if (Manifest.permission.ACCESS_FINE_LOCATION == result.permission) {
-                textLocationState.text = deniedReasonText(result)
+                textLocationState.text = denied
                 textLocationState.setTextColor(Color.RED)
-                if (isRequest) {
-                    textLocationResult.text = deniedReasonText(result)
-                    textLocationResult.setTextColor(Color.RED)
-                }
             }
             else if (Manifest.permission.WRITE_EXTERNAL_STORAGE == result.permission) {
-                textFileState.text = deniedReasonText(result)
+                textFileState.text = denied
                 textFileState.setTextColor(Color.RED)
-                if (isRequest) {
-                    textFileResult.text = deniedReasonText(result)
-                    textFileResult.setTextColor(Color.RED)
-                }
             }
             else if (Manifest.permission.CAMERA == result.permission) {
-                textCameraState.text = deniedReasonText(result)
+                textCameraState.text = denied
                 textCameraState.setTextColor(Color.RED)
-                if (isRequest) {
-                    textCameraResult.text = deniedReasonText(result)
-                    textCameraResult.setTextColor(Color.RED)
-                }
             }
             else if (Manifest.permission.READ_CONTACTS == result.permission) {
-                textContactsState.text = deniedReasonText(result)
+                textContactsState.text = denied
                 textContactsState.setTextColor(Color.RED)
-                if (isRequest) {
-                    textContactsResult.text = deniedReasonText(result)
-                    textContactsResult.setTextColor(Color.RED)
-                }
             }
-        } else if (result is PermissionResult.NeverAskedOrDeniedPermanently) {
+        } else if (result is PermissionState.NeverAskedOrDeniedPermanently) {
             val condition = "Never Asked Or Denied Permanently"
 
             if (Manifest.permission.ACCESS_FINE_LOCATION == result.permission) {
@@ -185,25 +202,6 @@ class MainActivity : AppCompatActivity() {
                 textContactsState.setTextColor(Color.BLACK)
             }
 
-        } else if (result is PermissionResult.Cancelled) {
-            textLocationState.text = cancelled
-            textLocationState.setTextColor(Color.RED)
-            textFileState.text = cancelled
-            textFileState.setTextColor(Color.RED)
-            textCameraState.text = cancelled
-            textCameraState.setTextColor(Color.RED)
-            textContactsState.text = cancelled
-            textContactsState.setTextColor(Color.RED)
-            if (isRequest) {
-                textLocationResult.text = cancelled
-                textLocationResult.setTextColor(Color.RED)
-                textFileResult.text = cancelled
-                textFileResult.setTextColor(Color.RED)
-                textCameraResult.text = cancelled
-                textCameraResult.setTextColor(Color.RED)
-                textContactsResult.text = cancelled
-                textContactsResult.setTextColor(Color.RED)
-            }
         }
     }
 

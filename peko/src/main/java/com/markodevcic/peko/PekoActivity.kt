@@ -35,7 +35,7 @@ internal class PekoActivity : FragmentActivity(),
 		ActivityCompat.requestPermissions(this@PekoActivity, permissions, channel.first)
 	}
 
-	override fun checkStateOfDeniedPermissions(permissions: Array<out String>,channel: Channel<PermissionResult>) {
+	override fun checkStateOfDeniedPermissions(permissions: Array<out String>,channel: Channel<PermissionState>) {
 		if (permissions.isEmpty()){
 			channel.close()
 		}
@@ -45,10 +45,10 @@ internal class PekoActivity : FragmentActivity(),
 			.filter { p -> !needRationalePermissions.contains(p) }
 
 		needRationalePermissions.forEach { permission ->
-			channel.trySend(PermissionResult.Denied.NeedsRationale(permission))
+			channel.trySend(PermissionState.NeedsRationale(permission))
 		}
 		permanentlyDeniedPermissions.forEach { permission ->
-			channel.trySend(PermissionResult.NeverAskedOrDeniedPermanently(permission))
+			channel.trySend(PermissionState.NeverAskedOrDeniedPermanently(permission))
 		}
 		channel.close()
 
