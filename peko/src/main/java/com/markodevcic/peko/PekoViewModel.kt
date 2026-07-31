@@ -11,7 +11,7 @@ internal class PekoViewModel : ViewModel() {
 
 	fun getChannel(executor: Int): Channel<PermissionResult>? = channels.remove(executor)
 
-	fun closeAllChannels() {
+	private fun closeAllChannels() {
 		channels.forEach { channel ->
 			channel.value.close()
 		}

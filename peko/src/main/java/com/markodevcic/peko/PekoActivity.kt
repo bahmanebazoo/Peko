@@ -37,7 +37,6 @@ internal class PekoActivity : FragmentActivity(),
 
 	override fun checkStateOfDeniedPermissions(permissions: Array<out String>,channel: Channel<PermissionResult>) {
 		if (permissions.isEmpty()){
-			channel.trySend(PermissionResult.Cancelled)
 			channel.close()
 		}
 		val needRationalePermissions = permissions
@@ -88,11 +87,6 @@ internal class PekoActivity : FragmentActivity(),
 			}
 			channel.close()
 		}
-	}
-
-	override fun finish() {
-		super.finish()
-		viewModel.closeAllChannels()
 	}
 
 	companion object {

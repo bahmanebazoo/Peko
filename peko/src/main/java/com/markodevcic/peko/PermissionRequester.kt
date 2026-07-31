@@ -119,12 +119,11 @@ interface PermissionRequester {
 				if (permissionState.denied.isNotEmpty()) {
 					val requestId = initNativeActivity()
 					val channel = Channel<PermissionResult>(Channel.UNLIMITED)
-					val resultsChannel : ReceiveChannel<PermissionResult> = channel
 					nativeActivity!!.requestPermissions(
 						permissionState.denied.toTypedArray(),
 						Pair(requestId,channel)
 					)
-					for (result in resultsChannel) {
+					for (result in channel) {
 						trySend(result)
 					}
 
@@ -144,11 +143,11 @@ interface PermissionRequester {
 
 		override fun checkPermissionsState(vararg permissions: String): Flow<PermissionResult> {
 			return if (permissions.isEmpty()) {
-				flowOf(PermissionResult.Cancelled)
+				emptyFlow()
 			} else {
 				val permissionState = permissionStateBuilder
 					.createPermissionState(requireContext(), *permissions)
-				return channelFlow {
+				channelFlow {
 					permissionState.granted.forEach { granted ->
 						trySend(PermissionResult.Granted(granted))
 					}
@@ -156,19 +155,15 @@ interface PermissionRequester {
 					if (permissionState.denied.isNotEmpty()) {
 						val checkStateId = initNativeActivity()
 						val channel = Channel<PermissionResult>(Channel.UNLIMITED)
-						val receiverChannel: ReceiveChannel<PermissionResult> = channel
 						nativeActivity!!.checkStateOfDeniedPermissions(
 							permissionState.denied.toTypedArray(),
 							channel
 						)
-						for (state in receiverChannel) {
+						for (state in channel) {
 							trySend(state)
 						}
 
 						finishNativeActivity(checkStateId)
-						this.close()
-					} else {
-						this.close()
 					}
 				}
 			}
