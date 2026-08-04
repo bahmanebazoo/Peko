@@ -3,7 +3,9 @@ package com.markodevcic.peko
 import android.content.Context
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert
@@ -17,14 +19,10 @@ class PermissionRequesterTest {
 	private val nativeActivity = Mockito.mock(NativeActivity::class.java)
 	private val permissionGrouper = Mockito.mock(PermissionGrouper::class.java)
 
-	private lateinit var permissionChannel: Channel<PermissionResult>
-
 	private lateinit var sut: PermissionRequester
 
 	@Before
 	fun setup() {
-		permissionChannel = Channel()
-
 		PermissionRequester.activityFactory = activityFactory
 		PermissionRequester.permissionGrouper = permissionGrouper
 		PermissionRequester.initialize(context)
@@ -46,13 +44,14 @@ class PermissionRequesterTest {
 			)
 		)
 
+		Mockito.doAnswer { invocation ->
+			val channel = invocation.getArgument<Pair<Int, kotlinx.coroutines.channels.Channel<PermissionResult>>>(1).second
+			channel.trySend(PermissionResult.Granted(permission))
+			channel.close()
+			null
+		}.`when`(nativeActivity).requestPermissions(Mockito.any(), Mockito.any())
 
 		runBlocking {
-			launch {
-				delay(200)
-				permissionChannel.send(PermissionResult.Granted(permission))
-				permissionChannel.close()
-			}
 			Assert.assertTrue(sut.request(permission).allGranted())
 		}
 	}
@@ -71,6 +70,63 @@ class PermissionRequesterTest {
 		runBlocking {
 			Assert.assertTrue(sut.request(permission).allGranted())
 		}
+	}
+
+	@Test
+	fun testRequestChecksPermissionStateOnCollection() {
+		val permission = "CONTACTS"
+		val result = sut.request(permission)
+
+		Mockito.verifyNoInteractions(permissionGrouper)
+		Mockito.`when`(permissionGrouper.group(context, permission)).thenReturn(
+			PermissionGroup(listOf(permission), listOf())
+		)
+
+		runBlocking {
+			Assert.assertTrue(result.allGranted())
+		}
+	}
+
+	@Test
+	fun testRequestFinishesActivityWhenCollectionIsCancelled() {
+		val permission = "CONTACTS"
+		val requestStarted = CompletableDeferred<Unit>()
+		Mockito.`when`(permissionGrouper.group(context, permission)).thenReturn(
+			PermissionGroup(listOf(), listOf(permission))
+		)
+		Mockito.doAnswer {
+			requestStarted.complete(Unit)
+			null
+		}.`when`(nativeActivity).requestPermissions(Mockito.any(), Mockito.any())
+
+		runBlocking {
+			val job = launch { sut.request(permission).collect {} }
+			requestStarted.await()
+			job.cancelAndJoin()
+		}
+
+		Mockito.verify(nativeActivity).finish()
+	}
+
+	@Test
+	fun testCheckPermissionsState() {
+		val permission = "CONTACTS"
+		Mockito.`when`(permissionGrouper.group(context, permission)).thenReturn(
+			PermissionGroup(listOf(), listOf(permission))
+		)
+		Mockito.doAnswer { invocation ->
+			val channel = invocation.getArgument<Channel<PermissionState>>(1)
+			channel.trySend(PermissionState.NeedsRationale(permission))
+			channel.close()
+			null
+		}.`when`(nativeActivity).checkStateOfDeniedPermissions(Mockito.any(), Mockito.any())
+
+		val states = runBlocking {
+			sut.checkPermissionsState(permission).toList()
+		}
+
+		Assert.assertEquals(listOf(PermissionState.NeedsRationale(permission)), states)
+		Mockito.verify(nativeActivity).finish()
 	}
 
 	@Test

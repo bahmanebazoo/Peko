@@ -109,30 +109,28 @@ interface PermissionRequester {
 		}
 
 		override fun request(vararg permissions: String): Flow<PermissionResult> {
-			val permissionGroup = permissionGrouper.group(requireContext(), *permissions)
-
-			val flow = channelFlow {
+			return channelFlow {
+				val permissionGroup = permissionGrouper.group(requireContext(), *permissions)
 				for (granted in permissionGroup.granted) {
 					trySend(PermissionResult.Granted(granted))
 				}
 				if (permissionGroup.denied.isNotEmpty()) {
 					val requestId = initNativeActivity()
 					val channel = Channel<PermissionResult>(Channel.UNLIMITED)
-					nativeActivity!!.requestPermissions(
-						permissionGroup.denied.toTypedArray(),
-						Pair(requestId,channel)
-					)
-					for (result in channel) {
-						trySend(result)
+					try {
+						nativeActivity!!.requestPermissions(
+							permissionGroup.denied.toTypedArray(),
+							Pair(requestId, channel)
+						)
+						for (result in channel) {
+							trySend(result)
+						}
+					} finally {
+						channel.close()
+						finishNativeActivity(requestId)
 					}
-
-					finishNativeActivity(requestId)
-					this.close()
-				} else {
-					this.close()
 				}
 			}
-			return flow
 		}
 
 		override fun isAnyGranted(vararg permissions: String): Boolean {
@@ -141,19 +139,18 @@ interface PermissionRequester {
 		}
 
 		override fun checkPermissionsState(vararg permissions: String): Flow<PermissionState> {
-			return if (permissions.isEmpty()) {
-				emptyFlow()
-			} else {
-				val permissionGroup = permissionGrouper
-					.group(requireContext(), *permissions)
-				channelFlow {
-					permissionGroup.granted.forEach { granted ->
-						trySend(PermissionState.Granted(granted))
-					}
+			return channelFlow {
+				if (permissions.isEmpty()) return@channelFlow
 
-					if (permissionGroup.denied.isNotEmpty()) {
-						val checkStateId = initNativeActivity()
-						val channel = Channel<PermissionState>(Channel.UNLIMITED)
+				val permissionGroup = permissionGrouper.group(requireContext(), *permissions)
+				permissionGroup.granted.forEach { granted ->
+					trySend(PermissionState.Granted(granted))
+				}
+
+				if (permissionGroup.denied.isNotEmpty()) {
+					val checkStateId = initNativeActivity()
+					val channel = Channel<PermissionState>(Channel.UNLIMITED)
+					try {
 						nativeActivity!!.checkStateOfDeniedPermissions(
 							permissionGroup.denied.toTypedArray(),
 							channel
@@ -161,7 +158,8 @@ interface PermissionRequester {
 						for (state in channel) {
 							trySend(state)
 						}
-
+					} finally {
+						channel.close()
 						finishNativeActivity(checkStateId)
 					}
 				}
